@@ -1,75 +1,58 @@
-import os
+import os, logging
 from dotenv import load_dotenv
+from telegram import Bot, Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger()
+
+# Load environment variables
 load_dotenv()
 TOKEN = os.environ.get('TELEGRAM-BOT-TOKEN')
 
-import telegram
-bot = telegram.Bot(token=TOKEN)
-
 # Verify if token is correct
+bot = Bot(token=TOKEN)
 print(bot.get_me())
 
-from telegram.ext import Updater
-updater = Updater(token=TOKEN)
-dispatcher = updater.dispatcher
+# '/start' handler
+def start(update: Update, _: CallbackContext) -> None:
+    update.message.reply_text('Hello! Use /nextdraw to get details of the upcoming Toto draw.')
 
-# Enable logging
-import logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# '/nextdraw' handler
+def next_draw(update: Update, _: CallbackContext) -> None:
+    # Get draw details
+    # Reply to user
+    return;
 
-# "/start" command handler
-def start(update, context):
-  context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+# Unknown handler
+def unknown(update: Update, _: CallbackContext) -> None:
+    update.message.reply_text('Sorry, don\'t understand.')
 
-from telegram.ext import CommandHandler
-start_handler = CommandHandler('start', start)
-dispatcher.add_handler(start_handler)
+# Function to start to bot
+def main() -> None:
+    updater = Updater(token=TOKEN)
 
-# "/caps" command handler
-def caps(update, context):
-    text_caps = ' '.join(context.args).upper()
-    context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
+    dispatcher = updater.dispatcher
 
-caps_handler = CommandHandler('caps', caps)
-dispatcher.add_handler(caps_handler)
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("nextdraw", next_draw))
+    dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
-# Message handler that echos back the message
-def echo(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+    updater.start_polling()
 
-from telegram.ext import MessageHandler, Filters
-echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
-dispatcher.add_handler(echo_handler)
-
-# Inline query handler
-from telegram import InlineQueryResultArticle, InputTextMessageContent
-def inline_caps(update, context):
-    query = update.inline_query.query
-    if not query:
-        return
-    results = list()
-    results.append(
-        InlineQueryResultArticle(
-            id=query.upper(),
-            title='Caps',
-            input_message_content=InputTextMessageContent(query.upper())
-        )
-    )
-    context.bot.answer_inline_query(update.inline_query.id, results)
-
-from telegram.ext import InlineQueryHandler
-inline_caps_handler = InlineQueryHandler(inline_caps)
-dispatcher.add_handler(inline_caps_handler)
-
-# Default handler for unknown commands
-def unknown(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I don't understand that command.")
-
-unknown_handler = MessageHandler(Filters.command, unknown)
-dispatcher.add_handler(unknown_handler)
+    updater.idle()
 
 # Start the bot
-updater.start_polling()
+main()
 
-# Run the bot until Ctrl-C is pressed
-updater.idle()
+# import requests
+# from bs4 import BeautifulSoup
+
+# URL = 'https://www.singaporepools.com.sg/en/product/pages/toto_results.aspx'
+# page = requests.get(URL)
+# soup = BeautifulSoup(page.content, 'html.parser')
+
+# jackpot = soup.find_all('div', class_='results-filter')
+# for elem in jackpot:
+#     print(elem)
