@@ -1,4 +1,4 @@
-import os, logging
+import os, logging, re
 from dotenv import load_dotenv
 from telegram import Bot, Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
@@ -21,14 +21,15 @@ db = client.toto_db
 draws = db.draws
 # draw = {
 #     '_id': 'next_draw',
-#     'date': '2021-01-01',
-#     'date_string': 'Fri, 01 Jan 2021, 6.30pm',
-#     'jackpot': '$1,000,000 est'
+#     'date': 'Mon, 19 Apr 2021 , 6.30pm',
+#     'jackpot': '$4,000,000 est'
 # }
-# draw_id = draws.insert_one(draw)
-print(draws.find_one({
-    '_id': 'next_draw'
-}))
+# result = draws.insert_one(draw)
+# print(result)
+# draw = draws.find_one({ '_id': 'next_draw' })
+# draw_date = draw['date']
+# for elem in draw_date.split():
+#     print(elem.strip(','))
 
 # Verify if token is correct
 def verify_bot() -> None:
@@ -50,6 +51,10 @@ def unknown(update: Update, _: CallbackContext) -> None:
 
 # Retrieve upcoming draw date and jackpot
 def get_next_draw_date_and_jackpot() -> (str, str):
+    # Get document from db
+    # Compare with today's date
+    # If not yet pass, return details from document
+    # Else web scrape and return details from results
     URL = 'https://www.singaporepools.com.sg/en/product/pages/toto_results.aspx'
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
@@ -57,16 +62,12 @@ def get_next_draw_date_and_jackpot() -> (str, str):
     driver = webdriver.Chrome(options=options) # Place chromedriver.exe in the same directory as this .py file
     driver.get(URL)
     jackpot_elem = driver.find_element_by_xpath("//span[@style='color:#EC243D; font-weight:bold']")
-    draw_date_elem = driver.find_element_by_class_name('toto-draw-date')
-    next_draw_date_string = draw_date_elem.text
-    next_draw_jackpot = jackpot_elem.text
+    date_elem = driver.find_element_by_class_name('toto-draw-date')
+    date_string = date_elem.text
+    jackpot = jackpot_elem.text
     driver.quit()
-    logging.info(f'Web Scrape Results | Next Draw Date: {next_draw_date_string} | Jackpot: {next_draw_jackpot}')
-    return next_draw_date_string, next_draw_jackpot
-
-# next_draw_date = date(2021, 1, 1)
-# next_draw_date_string = 'Fri, 01 Jan 2021, 6.30pm'
-# next_draw_jackpot = '$1,000,000 est'
+    logging.info(f'Scraping Singapore Pools website... | Next Draw Date: {date_string} | Jackpot: {jackpot}')
+    return date_string, jackpot
 
 # def get_next_draw_date_and_jackpot() -> (str, str):
 #     today_date = date.today()
@@ -90,9 +91,11 @@ def get_next_draw_date_and_jackpot() -> (str, str):
 #     next_draw_date = convert_to_date(next_draw_date_string)
 #     logging.info(f'After Update | Next Draw Date: {next_draw_date_string} | Jackpot: {next_draw_jackpot}')
 
-# def convert_to_date(date_string: str) -> date:
-#     draw_datetime = datetime.strptime(date_string, '%a, %d %b %Y , %I.%M%p')
-#     return draw_datetime.date()
+def convert_to_date(date_string: str) -> date:
+    year = re.search('\d{4}', date_string).group()
+    month = re.findall('\w{3}', date_string)[1]
+    day = re.search('\d{2}', date_string).group()
+    return datetime.strptime(f'{year}{month}{day}', '%Y%b%d').date()
 
 # Function to start to bot
 def main() -> None:
